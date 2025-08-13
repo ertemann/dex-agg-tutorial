@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "dex-agg-tutorial"
+version = "0.1.0"
+description = ""
+authors = ["ertemann <info@crypticcurve.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+ruff = "^0.12.8"
+black = "^25.1.0"
+mypy = "^1.17.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
