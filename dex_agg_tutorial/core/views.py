@@ -57,13 +57,14 @@ class PairsView(APIView):
         pairs = Pair.objects.exclude(active_exchanges=[]).values()
         return Response(pairs, status=200)
 
-    # only admin can add pairs
-    permission_classes = [IsAdminUser]
-
     def post(self, request, format=None):
         """
         Add a new token pair to the available token pairs.
+        Only admin users can create pairs.
         """
+        # Check admin permission for POST requests only
+        if not request.user.is_staff:
+            return Response({"error": "Admin access required"}, status=403)
         try:
             data = request.data
 
@@ -80,6 +81,7 @@ class PairsView(APIView):
             pair = Pair(
                 uid=next_uid,
                 pair_id=pair_id,
+                pool_contracts=data.get("pool_contracts", {}),
                 base_token=data.get("base_token"),
                 quote_token=data.get("quote_token"),
                 active_exchanges=data.get("active_exchanges", []),

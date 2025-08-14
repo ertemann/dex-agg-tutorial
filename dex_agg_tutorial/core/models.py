@@ -1,5 +1,4 @@
 from django.db import models
-from django.contrib.postgres.fields import ArrayField
 from .validation import Exchange
 
 
@@ -8,10 +7,14 @@ class Pair(models.Model):
 
     uid = models.IntegerField(unique=True)
     pair_id = models.CharField(max_length=40, unique=True)
+    pool_contracts = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Mapping of exchange IDs to their pool contract addresses"
+    )
     base_token = models.CharField(max_length=20)
     quote_token = models.CharField(max_length=20)
-    active_exchanges = ArrayField(
-        models.CharField(max_length=20, choices=Exchange.choices()),
+    active_exchanges = models.JSONField(
         default=list,
         blank=True,
         help_text="List of exchange IDs where this pair is active",

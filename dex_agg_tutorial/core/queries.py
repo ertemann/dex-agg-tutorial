@@ -1,15 +1,17 @@
 import os
 import requests
+import json
 from retry import retry
 from typing import Optional, Dict
+from dotenv import load_dotenv
+
+from web3 import Web3
 
 from .validation import BadRequestException, Exchange
 from .models import Pair
 
-#uniswap
-# import IUniswapV3PoolABI from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json'
-# import { ethers } from 'ethers'
-
+# Load environment variables from .env file
+load_dotenv()
 
 @retry(BadRequestException, delay=10, tries=2)
 def request_json(url: str) -> dict:
@@ -22,19 +24,64 @@ def request_json(url: str) -> dict:
 
 def query_uniswap_price(pair: Pair, rpc_url: str) -> Optional[float]:
     """Query Uniswap for token pair price."""
-    # Implement Uniswap-specific price query logic
     try:
-        return 1e6
+        # Get the Uniswap pool contract address
+        pool_address = pair.pool_contracts.get("uniswap")
+        if not pool_address:
+            print(f"No Uniswap pool contract found for pair {pair.pair_id}")
+            return None
+
+        # Set up Web3 provider
+        web3 = Web3(Web3.HTTPProvider(rpc_url))
+        
+        # Load Uniswap pool ABI from config
+        with open('uniswap_pool_abi.json', 'r') as abi_file:
+            pool_abi = json.load(abi_file)
+        
+        pool_contract = web3.eth.contract(
+            address=Web3.to_checksum_address(pool_address), 
+            abi=pool_abi
+        )
+
+        # Get current price from slot0
+        slot0 = pool_contract.functions.slot0().call()
+        sqrt_price_x96 = slot0[0]
+
+        # Convert sqrt_price (Q64.96 format) to actual price
+        # sqrt_price is stored as u128 in Q64.96 fixed point format
+        # To get actual price: (sqrt_price / 2^96)^2
+        return float((sqrt_price_x96)**2 / 2 ** 96)
+        
     except Exception as e:
         print(f"Error querying Uniswap: {e}")
         return None
 
 
 def query_hyperion_price(pair: Pair, rpc_url: str) -> Optional[float]:
-    """Query Hyperion for token pair price."""
-    # Implement Hyperion-specific price query
+    """Query Hyperion pool resource to get sqrt_price directly."""
     try:
-        return 1e6
+        # Get the Hyperion pool contract address
+        pool_address = pair.pool_contracts.get("hyperion")
+        if not pool_address:
+            print(f"No Hyperion pool contract found for pair {pair.pair_id}")
+            return None
+            
+        # Query the LiquidityPoolV3 resource directly
+        resource_url = f"{rpc_url}/v1/accounts/{pool_address}/resource/0x8b4a2c4bb53857c718a04c020b98f8c2e1f99a68b0f57389a8bf5434cd22e05c::pool_v3::LiquidityPoolV3"
+        
+        response = requests.get(resource_url)
+        if response.status_code == 200:
+            resource_data = response.json()
+            # Extract sqrt_price from the resource data
+            sqrt_price = int(resource_data['data']['sqrt_price'])
+            
+            actual_price = (sqrt_price **2) / (2 ** 96)
+            
+            return actual_price
+        else:
+            print(f"Hyperion API error: {response.status_code}")
+            return None
+            
     except Exception as e:
         print(f"Error querying Hyperion: {e}")
         return None
@@ -60,8 +107,7 @@ def get_token_price(token_pair: str) -> Dict:
     
     prices = {}
     
-    # We don't have to check if all these items are available as we expect the Admin to only add exchanges and token pairs that match
-    # We should however double check if the pairs itself are stull supported which is done in the price function itself.
+    # We expect exchange to be defined for the pairs and supported as its admin defined
     for exchange_id in pair.active_exchanges:
         query_func = EXCHANGE_QUERY_FUNCTIONS[exchange_id]
         network = Exchange.get_network(exchange_id)
@@ -81,6 +127,6 @@ def get_token_price(token_pair: str) -> Dict:
     
     return {
         "token_pair": pair.pair_id,
-        "best_price": min(prices.values()),
+        "best_price": min(prices.values()), # Assumes pricing order is main/quote meaning lower is a better value (for buyers)
         "prices": prices
     }
