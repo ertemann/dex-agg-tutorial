@@ -40,11 +40,11 @@ Server will be available at `http://127.0.0.1:8000/`
 
 ## Adding Sample Data
 
-To add all sample pairs from `tests/sample_pairs.json` at once, use this bash script:
+To add all sample pairs from `tests/sample_pairs.json` at once, use this bash script (Adjust the admin username and password):
 
 ```bash
 # Load all sample pairs (requires jq)
-cat tests/sample_pairs.json | jq -c '.[]' | while read pair; do
+cat core/tests/sample_pairs.json | jq -c '.[]' | while read pair; do
   echo "Adding pair: $(echo $pair | jq -r '.pair_id')"
   curl -X POST http://127.0.0.1:8000/pairs/ \
     -H "Content-Type: application/json" \
@@ -75,15 +75,12 @@ curl http://127.0.0.1:8000/price/WBTCUSDC/
 Example output:
 ```json
 {
-    "price": {
-        "token_pair": "WBTCUSDC",
-        "best_price": 98765.43,
-        "prices": {
-            "uniswap": 98765.43,
-            "hyperion": 98890.21
-        }
-    },
-    "pair": "WBTCUSDC"
+    "token_pair": "WBTCUSDC",
+    "best_price": 98765.43,
+    "prices": {
+        "uniswap": 98765.43,
+        "hyperion": 98890.21
+    }
 }
 ``` 
 

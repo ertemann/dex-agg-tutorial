@@ -15,6 +15,7 @@ load_dotenv()
 
 @retry(BadRequestException, delay=10, tries=2)
 def request_json(url: str) -> dict:
+    """simple function to manage direct queries to the chain"""
     r = requests.get(url)
     if r.status_code == 200:
         return r.json()
@@ -45,13 +46,23 @@ def query_uniswap_price(pair: Pair, rpc_url: str) -> Optional[float]:
 
         # Get current price from slot0
         slot0 = pool_contract.functions.slot0().call()
-        sqrt_price_x96 = slot0[0]
+        sqrt_price_x96 = int(slot0[0])  # Cast bigint to int
 
         # Convert sqrt_price (Q64.96 format) to actual price
-        # sqrt_price is stored as u128 in Q64.96 fixed point format
-        # To get actual price: (sqrt_price / 2^96)^2
-        return float(((sqrt_price_x96) / 2 ** 96)**2)
+        # Formula: (sqrtPriceX96 / 2^96)^2
+        # This gives us the price of token0 in terms of token1
+        raw_price = (sqrt_price_x96 / (2 ** 96)) ** 2
         
+        # In Uniswap V3, token0 and token1 ordering is based on contract address comparison
+        # The raw price from sqrt gives us token0/token1
+        # So the price of USDC/ETH comes out as dollars priced in ETH. To do smart ordering we
+        # would have to start quering the token0/token1 addresses and do this dynamically.
+        
+        # Adjust for token decimals difference
+        # Price = raw_price * 10^(base_decimals - quote_decimals)
+        decimal_adjustment = 10 ** (pair.base_token_decimals - pair.quote_token_decimals)
+        return raw_price * decimal_adjustment
+
     except Exception as e:
         print(f"Error querying Uniswap: {e}")
         return None
@@ -75,11 +86,14 @@ def query_hyperion_price(pair: Pair, rpc_url: str) -> Optional[float]:
         
         # Hyperion uses x64 fixed-point for sqrt_price, not Q64.96 like Uniswap
         # Formula: (sqrt_price / 2^64)^2
-        actual_price = float((sqrt_price / (2**64))**2)
+        raw_price = float((sqrt_price / (2**64))**2)
         
-        return actual_price
+        # Adjust for token decimals difference
+        # Price = raw_price * 10^(base_decimals - quote_decimals)
+        decimal_adjustment = 10 ** (pair.base_token_decimals - pair.quote_token_decimals)
+        return raw_price * decimal_adjustment
             
-    except Exception as e:
+    except Exception as e: # fails gracefully, no price given
         print(f"Error querying Hyperion: {e}")
         return None
 
@@ -124,6 +138,6 @@ def get_token_price(token_pair: str) -> Dict:
     
     return {
         "token_pair": pair.pair_id,
-        "best_price": min(prices.values()), # Assumes pricing order is main/quote meaning lower is a better value (for buyers)
+        "best_price": min(prices.values()), # Assumes pricing order is main/quote meaning lower is a better value (for buyers of base asset)
         "prices": prices
     }

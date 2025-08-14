@@ -36,8 +36,13 @@ class PriceView(APIView):
             )
 
         # Get price if pair is valid
-        price = get_token_price(token_pair)
-        return Response({"price": price, "pair": token_pair}, status=200)
+        price_data = get_token_price(token_pair)
+        
+        # Check if we got an error (no prices available)
+        if "error" in price_data:
+            return Response(price_data, status=503)  # Service Unavailable
+        
+        return Response(price_data, status=200)
 
 
 class PairsView(APIView):
@@ -83,6 +88,8 @@ class PairsView(APIView):
                 pool_contracts=data.get("pool_contracts", {}),
                 base_token=data.get("base_token"),
                 quote_token=data.get("quote_token"),
+                base_token_decimals=data.get("base_token_decimals", 18),
+                quote_token_decimals=data.get("quote_token_decimals", 18),
                 active_exchanges=data.get("active_exchanges", []),
             )
             pair.save()

@@ -3,6 +3,8 @@
     "pair_id": "WBTCUSDC", 
     "base_token": "WBTC",
     "quote_token": "USDC",
+    "base_token_decimals": 8,
+    "quote_token_decimals": 6,
     "active_exchanges": ["uniswap", "hyperion"],
     "pool_contracts": {
       "uniswap": "0x99ac8ca7087fa4a2a1fb6357269965a2014abc35",
@@ -10,9 +12,11 @@
     }
   },
   {
-    "pair_id": "USDCETH",
+    "pair_id": "USDCWETH",
     "base_token": "USDC", 
-    "quote_token": "ETH",
+    "quote_token": "WETH",
+    "base_token_decimals": 6,
+    "quote_token_decimals": 18,
     "active_exchanges": ["uniswap"],
     "pool_contracts": {
       "uniswap": "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640"
@@ -22,6 +26,8 @@
     "pair_id": "APTUSDC",
     "base_token": "APT",
     "quote_token": "USDC",
+    "base_token_decimals": 8,
+    "quote_token_decimals": 6,
     "active_exchanges": ["hyperion"],
     "pool_contracts": {
       "hyperion": "0x925660b8618394809f89f8002e2926600c775221f43bf1919782b297a79400d8"

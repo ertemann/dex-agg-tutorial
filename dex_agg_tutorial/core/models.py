@@ -13,6 +13,8 @@ class Pair(models.Model):
     )
     base_token = models.CharField(max_length=20)
     quote_token = models.CharField(max_length=20)
+    base_token_decimals = models.IntegerField(default=18)
+    quote_token_decimals = models.IntegerField(default=18)
     active_exchanges = models.JSONField(
         default=list,
         blank=True,

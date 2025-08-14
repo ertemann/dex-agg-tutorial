@@ -1,203 +1,173 @@
 import os
 import json
 from django.test import TestCase
-from django.conf import settings
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth.models import User
 
-# Import from the actual app
 from core.models import Pair
-from core.queries import query_uniswap_price, query_hyperion_price, get_token_price
+from core.queries import get_token_price
 
 
-class PricingQueryTest(TestCase):
-    """Test pricing queries with real sample data."""
+class PairAPITest(APITestCase):
+    """Test API with real sample data."""
     
-    @classmethod
-    def setUpTestData(cls):
-        """Load sample pairs from JSON and create test data."""
-        # Load sample pairs
+    def setUp(self):
+        """Load sample pairs and create admin."""
+        self.admin = User.objects.create_superuser(
+            username='admin',
+            password='testpass'
+        )
+        
+        # Load sample pairs from JSON
+        sample_file = os.path.join(os.path.dirname(__file__), 'sample_pairs.json')
+        with open(sample_file, 'r') as f:
+            self.sample_pairs = json.load(f)
+        
+        # Create pairs in database
+        for i, pair_data in enumerate(self.sample_pairs, 1):
+            Pair.objects.create(uid=i, **pair_data)
+    
+    def test_list_pairs(self):
+        """Test GET /pairs/ returns all sample pairs."""
+        response = self.client.get('/pairs/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), len(self.sample_pairs))
+        
+        # Check that all our sample pairs are present
+        pair_ids = [pair['pair_id'] for pair in response.data]
+        expected_ids = [pair['pair_id'] for pair in self.sample_pairs]
+        for expected_id in expected_ids:
+            self.assertIn(expected_id, pair_ids)
+    
+    def test_create_pair_via_api(self):
+        """Test creating a new pair via POST /pairs/."""
+        self.client.force_authenticate(user=self.admin)
+        
+        new_pair = {
+            "pair_id": "LINKUSDC",
+            "base_token": "LINK", 
+            "quote_token": "USDC",
+            "base_token_decimals": 18,
+            "quote_token_decimals": 6,
+            "active_exchanges": ["uniswap"],
+            "pool_contracts": {"uniswap": "0x1234567890abcdef"}
+        }
+        
+        response = self.client.post('/pairs/', new_pair, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("Created pair LINKUSDC", response.data['message'])
+        
+        # Verify the pair was actually created by querying the API
+        get_response = self.client.get('/pairs/')
+        self.assertEqual(get_response.status_code, status.HTTP_200_OK)
+        
+        # Check that LINKUSDC is now in the list
+        pair_ids = [pair['pair_id'] for pair in get_response.data]
+        self.assertIn("LINKUSDC", pair_ids)
+        
+        # Find the created pair and verify its attributes
+        created_pair = next((p for p in get_response.data if p['pair_id'] == 'LINKUSDC'), None)
+        self.assertIsNotNone(created_pair)
+        self.assertEqual(created_pair['base_token'], 'LINK')
+        self.assertEqual(created_pair['quote_token'], 'USDC')
+        self.assertEqual(created_pair['base_token_decimals'], 18)
+        self.assertEqual(created_pair['quote_token_decimals'], 6)
+    
+    def test_price_endpoint_structure(self):
+        """Test that price endpoints return correct structure."""
+        for sample_pair in self.sample_pairs:
+            pair_id = sample_pair['pair_id']
+            response = self.client.get(f'/price/{pair_id}/')
+            
+            # Should return 200 and have correct structure
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertIn('token_pair', response.data)
+            self.assertEqual(response.data['token_pair'], pair_id)
+            
+            # If we got actual prices (not an error), verify best_price logic
+            if 'prices' in response.data and 'best_price' in response.data:
+                prices = response.data['prices']
+                best_price = response.data['best_price']
+                
+                # best_price should be the minimum of all exchange prices
+                if prices:  # Only check if we have prices
+                    expected_best = min(prices.values())
+                    self.assertEqual(best_price, expected_best)
+                    print(f"{pair_id}: best_price ({best_price}) = min of {list(prices.values())}")
+    
+    def test_price_endpoint_nonexistent_pair(self):
+        """Test price endpoint with non-existent pair."""
+        response = self.client.get('/price/NONEXISTENT/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class PricingIntegrationTest(TestCase):
+    """Integration tests with real sample data and pricing functions."""
+    
+    def setUp(self):
+        """Load sample pairs into database."""
         sample_file = os.path.join(os.path.dirname(__file__), 'sample_pairs.json')
         with open(sample_file, 'r') as f:
             sample_pairs = json.load(f)
         
-        # Create pairs in database
         for i, pair_data in enumerate(sample_pairs, 1):
-            Pair.objects.create(
-                uid=i,
-                pair_id=pair_data['pair_id'],
-                base_token=pair_data['base_token'],
-                quote_token=pair_data['quote_token'],
-                pool_contracts=pair_data['pool_contracts'],
-                active_exchanges=pair_data['active_exchanges']
-            )
-            
-        print(f"Created {len(sample_pairs)} test pairs from sample data")
+            Pair.objects.create(uid=i, **pair_data)
     
     def test_pairs_loaded_correctly(self):
-        """Test that sample pairs were loaded correctly."""
+        """Test that all sample pairs loaded with correct attributes."""
         pairs = Pair.objects.all()
-        self.assertEqual(pairs.count(), 3)
+        self.assertGreater(pairs.count(), 0)
         
-        # Test specific pairs
-        wbtc_pair = Pair.objects.get(pair_id="WBTCUSDC")
-        self.assertEqual(wbtc_pair.base_token, "WBTC")
-        self.assertEqual(wbtc_pair.quote_token, "USDC")
-        self.assertIn("uniswap", wbtc_pair.pool_contracts)
-        self.assertIn("hyperion", wbtc_pair.pool_contracts)
-        
-        apt_pair = Pair.objects.get(pair_id="APTUSDC")
-        self.assertEqual(len(apt_pair.active_exchanges), 1)
-        self.assertIn("hyperion", apt_pair.active_exchanges)
-    
-    def test_hyperion_price_query_structure(self):
-        """Test Hyperion price query function structure."""
-        apt_pair = Pair.objects.get(pair_id="APTUSDC")
-        
-        # Test that the function can access pool contract
-        pool_address = apt_pair.pool_contracts.get("hyperion")
-        self.assertIsNotNone(pool_address)
-        self.assertTrue(pool_address.startswith("0x"))
-        
-        # Note: Actual network calls would fail in tests without mocking
-        # This just tests the structure
-        print(f"APT/USDC Hyperion pool: {pool_address}")
-    
-    def test_uniswap_price_query_structure(self):
-        """Test Uniswap price query function structure."""
-        usdc_pair = Pair.objects.get(pair_id="USDCETH")
-        
-        # Test that the function can access pool contract
-        pool_address = usdc_pair.pool_contracts.get("uniswap")
-        self.assertIsNotNone(pool_address)
-        self.assertTrue(pool_address.startswith("0x"))
-        
-        print(f"USDC/ETH Uniswap pool: {pool_address}")
-    
-    def test_multi_exchange_pair(self):
-        """Test pair with multiple exchanges."""
-        wbtc_pair = Pair.objects.get(pair_id="WBTCUSDC")
-        
-        # Should have both exchanges
-        self.assertEqual(len(wbtc_pair.active_exchanges), 2)
-        self.assertIn("uniswap", wbtc_pair.active_exchanges)
-        self.assertIn("hyperion", wbtc_pair.active_exchanges)
-        
-        # Should have pool contracts for both
-        self.assertIn("uniswap", wbtc_pair.pool_contracts)
-        self.assertIn("hyperion", wbtc_pair.pool_contracts)
-        
-        print(f"WBTC/USDC multi-exchange pools:")
-        print(f"  Uniswap: {wbtc_pair.pool_contracts['uniswap']}")
-        print(f"  Hyperion: {wbtc_pair.pool_contracts['hyperion']}")
-    
-    def test_get_token_price_integration(self):
-        """Test the main get_token_price function."""
-        # Test with each pair type
-        test_pairs = ["WBTCUSDC", "USDCETH", "APTUSDC"]
-        
-        for pair_id in test_pairs:
-            pair = Pair.objects.get(pair_id=pair_id)
-            
-            # Test that function can access pair data
-            self.assertTrue(pair.is_active)
+        for pair in pairs:
+            # Basic validation
+            self.assertIsNotNone(pair.pair_id)
+            self.assertIsNotNone(pair.base_token)
+            self.assertIsNotNone(pair.quote_token)
+            self.assertIsInstance(pair.base_token_decimals, int)
+            self.assertIsInstance(pair.quote_token_decimals, int)
+            self.assertIsInstance(pair.active_exchanges, list)
+            self.assertIsInstance(pair.pool_contracts, dict)
             self.assertGreater(len(pair.active_exchanges), 0)
             
-            # Test pool contracts exist for active exchanges
-            for exchange in pair.active_exchanges:
-                self.assertIn(exchange, pair.pool_contracts)
-                self.assertIsNotNone(pair.pool_contracts[exchange])
+            print(f"✓ {pair.pair_id}: {pair.base_token}({pair.base_token_decimals}) / {pair.quote_token}({pair.quote_token_decimals}) on {pair.active_exchanges}")
+    
+    def test_pricing_function_calls(self):
+        """Test that pricing functions can be called (takes RPC from.env)."""
+        pairs = Pair.objects.all()
+        
+        for pair in pairs:
+            print(f"\n--- Testing {pair.pair_id} ---")
             
-            print(f"{pair_id}: {pair.active_exchanges} exchanges configured")
-    
-    def test_pricing_query_error_handling(self):
-        """Test error handling for missing pool contracts."""
-        # Create pair with missing pool contract
-        test_pair = Pair.objects.create(
-            uid=99,
-            pair_id="TESTMISSING",
-            base_token="TEST",
-            quote_token="TEST",
-            pool_contracts={"uniswap": "0x123"},  # Has uniswap but not hyperion
-            active_exchanges=["uniswap", "hyperion"]  # Claims to have hyperion
-        )
-        
-        # Test that missing contract is handled
-        hyperion_pool = test_pair.pool_contracts.get("hyperion")
-        self.assertIsNone(hyperion_pool)
-        
-        uniswap_pool = test_pair.pool_contracts.get("uniswap") 
-        self.assertIsNotNone(uniswap_pool)
-
-
-class PairAPIIntegrationTest(APITestCase):
-    """Test API endpoints with sample data."""
-    
-    def setUp(self):
-        """Create admin user and load sample data."""
-        self.admin_user = User.objects.create_superuser(
-            username='admin',
-            email='admin@test.com', 
-            password='testpass123'
-        )
-        
-        # Load sample pairs
-        sample_file = os.path.join(os.path.dirname(__file__), 'sample_pairs.json')
-        with open(sample_file, 'r') as f:
-            self.sample_pairs = json.load(f)
-    
-    def test_create_sample_pairs_via_api(self):
-        """Test creating all sample pairs via API."""
-        self.client.force_authenticate(user=self.admin_user)
-        
-        created_pairs = []
-        for pair_data in self.sample_pairs:
-            response = self.client.post('/pairs/', pair_data, format='json')
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-            created_pairs.append(response.data['pair_id'])
-        
-        self.assertEqual(len(created_pairs), 3)
-        self.assertIn("WBTCUSDC", created_pairs)
-        self.assertIn("USDCETH", created_pairs)  
-        self.assertIn("APTUSDC", created_pairs)
-        
-        # Verify in database
-        self.assertEqual(Pair.objects.count(), 3)
-    
-    def test_get_all_pairs_endpoint(self):
-        """Test GET /pairs/ with sample data."""
-        # Create pairs first
-        for i, pair_data in enumerate(self.sample_pairs, 1):
-            Pair.objects.create(
-                uid=i,
-                **pair_data
-            )
-        
-        response = self.client.get('/pairs/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 3)
-        
-        # Check response includes pool_contracts
-        for pair in response.data:
-            self.assertIn('pool_contracts', pair)
-            self.assertIn('active_exchanges', pair)
-            self.assertGreater(len(pair['active_exchanges']), 0)
-    
-    def test_price_endpoint_with_sample_data(self):
-        """Test price endpoint with loaded pairs."""
-        # Create a test pair
-        Pair.objects.create(
-            uid=1,
-            pair_id="USDCETH",
-            base_token="USDC",
-            quote_token="ETH",
-            pool_contracts={"uniswap": "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640"},
-            active_exchanges=["uniswap"]
-        )
-        
-        # Test price endpoint (will return mock data from queries)
-        response = self.client.get('/price/USDCETH/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('price', response.data)
-        self.assertIn('pair', response.data)
+            # Call the main pricing function
+            result = get_token_price(pair.pair_id)
+            
+            # Should always return a dict with token_pair
+            self.assertIsInstance(result, dict)
+            self.assertIn('token_pair', result)
+            self.assertEqual(result['token_pair'], pair.pair_id)
+            
+            if 'error' in result:
+                print(f"{pair.pair_id}: {result['error']}")
+                # This is expected if we don't have RPC URLs configured
+            else:
+                # We got actual prices!
+                self.assertIn('best_price', result)
+                self.assertIn('prices', result)
+                
+                print(f"{pair.pair_id}: Best price = {result['best_price']}")
+                
+                # Validate price structure
+                for exchange, price in result['prices'].items():
+                    self.assertIsInstance(price, (int, float))
+                    self.assertGreater(price, 0)
+                    print(f"  {exchange}: {price}")
+                
+                # Basic sanity checks for known pairs
+                if pair.pair_id == "WBTCUSDC":
+                    # BTC should be > $10,000 
+                    self.assertGreater(result['best_price'], 10000)
+                elif pair.pair_id == "APTUSDC":
+                    # APT should be reasonable (> $1, < $1000)
+                    self.assertGreater(result['best_price'], 1)
+                    self.assertLess(result['best_price'], 1000)

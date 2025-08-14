@@ -114,4 +114,4 @@ INSTALLED_APPS = [
     path("price/<str:token_pair>/", views.PriceView.as_view(), name="price"),
 
 
-    poetry run python dex_agg_tutorial/manage.py test tests.test_pricing)
+    poetry run python dex_agg_tutorial/manage.py test tests.test_pricing)'
