@@ -1,4 +1,10 @@
-Welcome to this small tutorial on building a crypto dex aggregator in Python
+# Building a Multi-Chain DEX Aggregator Tutorial
+
+Welcome to this tutorial on building a cryptocurrency DEX aggregator in Python! 
+
+In this tutorial, you'll learn how to create a real working API that queries live price data from multiple decentralized exchanges across different blockchains. We'll build a Django REST API that aggregates prices from Uniswap (Ethereum) and Hyperion (Aptos), demonstrating how to work with both EVM and Move blockchain architectures.
+
+This tutorial is designed for developers who want to understand how DeFi protocols work under the hood and gain hands-on experience with multi-chain development. No prior blockchain experience required – we'll explain the concepts as we go!
 
 # Prerequisites & Setup
 
@@ -61,15 +67,20 @@ You can find the hook in the home directory of this codebase under `pre-push.sh`
 
 You can configure what exactly black and ruff will touch in the pyproject.toml. A good example for a configuration can be found [here](https://github.com/astral-sh/ruff).
 
-## Implementation plan and requirements
+## Implementation Plan & Requirements
 
-Requirements:
-- Build a basic dex-aggregator API
-- Query prices of token pairs from 2 DEXs
-- Handle correct input validation
-- Add readme to run the API locally
+**Core Features:**
+- Build a basic DEX aggregator API
+- Query prices from 2 DEXs (Uniswap + Hyperion)  
+- Handle input validation with Django models
+- Provide local development setup instructions
 
-We can query the prices from the chain using libraries like Viem/Wagmi or straight up Python Request. For the Web API we can use the popular Django REST framework so we are future proofing if we need to add complex cache, user UIs/swagger or backends to the equation. We can handle the validation of input with some common pattern-matching and potentially a whitelisted set of token-pairs. For the Readme it is likely best to build a simple docker container so running the system locally won't be an issue.
+**Technical Approach:**
+We'll query blockchain data using two different methods: **Web3.py SDK** for Ethereum/Uniswap and **direct REST API calls** for Aptos/Hyperion. 
+
+For the backend, we'll use **Django REST framework** which provides excellent type safety, built-in validation, and a clear path for future enhancements like caching, user authentication, or admin interfaces.
+
+Input validation will be handled through Django's model system with a curated set of token pairs stored in the database, ensuring we only support exchanges we've actually implemented and tested.
 
 ## Setting up django
 
