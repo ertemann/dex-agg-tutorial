@@ -86,7 +86,7 @@ Lastly in our setup we will make a directory for our core logic to separate it f
 
 # The core application
 
-As discussed before our app consists of the following items: the django api and config, the logic to query the right token price and a validation setup of input and output. To simplify our coding going forward we are therefore splitting up our logic into three files and will create a set of example functions to determine our app logic. For the tutorial we are naming the files `views.py`, `validation.py` and `queries.py` which are hosted under the `/core` directory.
+As discussed before our app consists of the following items: the django api and config, the django model, the logic to query the right token price and a validation setup of input and output. To simplify our coding going forward we are therefore splitting up our logic into three files and will create a set of example functions to determine our app logic. For the tutorial we are naming the files `views.py`, `validation.py` and `queries.py` which are hosted under the `/core` directory.
 
 ## building the skeleton
 
@@ -96,3 +96,22 @@ As discussed before our app consists of the following items: the django api and 
 
 
 # Conclusion
+
+poetry add web3, retry python-dotenv psycopg2
+python manage.py makemigrations core
+poetry run python dex_agg_tutorial/manage.py migrate
+
+add
+
+INSTALLED_APPS = [
+....
+    "core",
+]
+
+
+    path("", views.DefaultView.as_view(), name="default"),
+    path("pairs/", views.PairsView.as_view(), name="pairs"),
+    path("price/<str:token_pair>/", views.PriceView.as_view(), name="price"),
+
+
+    poetry run python dex_agg_tutorial/manage.py test tests.test_pricing)

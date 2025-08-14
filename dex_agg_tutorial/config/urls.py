@@ -21,9 +21,7 @@ from core import views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path(
-        "network_history/<str:network_name>/",
-        views.NetworksHistoryView.as_view(),
-        name="history",
-    ),
+    path("", views.DefaultView.as_view(), name="default"),
+    path("pairs/", views.PairsView.as_view(), name="pairs"),
+    path("price/<str:token_pair>/", views.PriceView.as_view(), name="price"),
 ]

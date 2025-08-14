@@ -1,5 +1,4 @@
 from django.db import models
-from .validation import Exchange
 
 
 class Pair(models.Model):

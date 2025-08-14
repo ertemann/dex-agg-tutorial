@@ -50,7 +50,7 @@ def query_uniswap_price(pair: Pair, rpc_url: str) -> Optional[float]:
         # Convert sqrt_price (Q64.96 format) to actual price
         # sqrt_price is stored as u128 in Q64.96 fixed point format
         # To get actual price: (sqrt_price / 2^96)^2
-        return float((sqrt_price_x96)**2 / 2 ** 96)
+        return float(((sqrt_price_x96) / 2 ** 96)**2)
         
     except Exception as e:
         print(f"Error querying Uniswap: {e}")
@@ -69,18 +69,15 @@ def query_hyperion_price(pair: Pair, rpc_url: str) -> Optional[float]:
         # Query the LiquidityPoolV3 resource directly
         resource_url = f"{rpc_url}/v1/accounts/{pool_address}/resource/0x8b4a2c4bb53857c718a04c020b98f8c2e1f99a68b0f57389a8bf5434cd22e05c::pool_v3::LiquidityPoolV3"
         
-        response = requests.get(resource_url)
-        if response.status_code == 200:
-            resource_data = response.json()
-            # Extract sqrt_price from the resource data
-            sqrt_price = int(resource_data['data']['sqrt_price'])
-            
-            actual_price = (sqrt_price **2) / (2 ** 96)
-            
-            return actual_price
-        else:
-            print(f"Hyperion API error: {response.status_code}")
-            return None
+        resource_data = request_json(resource_url)
+        # Extract sqrt_price from the resource data (x64 fixed-point)
+        sqrt_price = int(resource_data['data']['sqrt_price'])
+        
+        # Hyperion uses x64 fixed-point for sqrt_price, not Q64.96 like Uniswap
+        # Formula: (sqrt_price / 2^64)^2
+        actual_price = float((sqrt_price / (2**64))**2)
+        
+        return actual_price
             
     except Exception as e:
         print(f"Error querying Hyperion: {e}")
