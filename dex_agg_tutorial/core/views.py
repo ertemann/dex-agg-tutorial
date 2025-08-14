@@ -57,6 +57,7 @@ class PairsView(APIView):
         pairs = Pair.objects.exclude(active_exchanges=[]).values()
         return Response(pairs, status=200)
 
+    # only admin can add pairs
     permission_classes = [IsAdminUser]
 
     def post(self, request, format=None):
