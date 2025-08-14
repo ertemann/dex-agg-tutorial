@@ -1,26 +1,59 @@
 Welcome to this small tutorial on building a crypto dex aggregator in Python
 
-# pre-requisites/Setup
+# Prerequisites & Setup
 
-## python setup
+## Python Environment Setup
 
-Install Poetry `pipx install poetry`
+### Step 1: Install Poetry
+```bash
+pipx install poetry
+```
 
-Create poetry project `poetry new PROJECT_NAME`
+### Step 2: Create New Project
+```bash
+poetry new PROJECT_NAME
+cd PROJECT_NAME
+```
 
-add Ruff, blackl mypy `poetry add black ruff mypy`
+### Step 3: Add Development Tools
+```bash
+poetry add black ruff mypy
+```
 
-You can use ruff and black using: `poetry run black dex_agg_tutorial` and `poetry run ruff check` and `poetry run mypy`
+### Step 4: Test Your Tools
+```bash
+# Format code
+poetry run black dex_agg_tutorial
 
-setup as git 
+# Check for issues  
+poetry run ruff check
 
-1. `git init`
-2. `git checkout -b master`
-3. `git add .`
-4. `git commit -a -m "project setup"`
-5. Create a new EMPTY repo on your git account
-6. `git remote add origin https://github.com/USERNAME/REPO_NAME.git`
-7. `git push --set-upstream origin master`
+# Type checking
+poetry run mypy
+```
+
+### Step 5: Initialize Git Repository
+```bash
+# 1. Initialize git
+git init
+
+# 2. Create master branch
+git checkout -b master
+
+# 3. Stage all files
+git add .
+
+# 4. Make initial commit
+git commit -a -m "project setup"
+
+# 5. Create a new EMPTY repo on your git account (GitHub/GitLab)
+
+# 6. Add remote origin
+git remote add origin https://github.com/USERNAME/REPO_NAME.git
+
+# 7. Push to remote
+git push --set-upstream origin master
+```
 
 You can also use the above tools to setup a CI in github to format, lint and typecheck our files using our current Poetry environment or as we do in this tutorial, setup a pre-push hook that is called when you make git commands in this environment.
 
@@ -389,7 +422,7 @@ You can find more information about this more complex querying approach on the [
 
 ### Querying Hyperion (Aptos)
 
-For Hyperion on Aptos, we take a different approach - using REST APIs directly without an SDK. Aptos uses a specific naming to accces any and all contract through something called a [view function](https://fullnode.mainnet.aptoslabs.com/v1/spec#/operations/view). the nomenclature is: `CONTRACT::method::function``. So going to the [hyperion docs](https://docs.hyperion.xyz/developer/via-contract) and referencing their main contract address we can see all methods and functions on the Aptos [blockchain explorer](https://explorer.aptoslabs.com/object/0x8b4a2c4bb53857c718a04c020b98f8c2e1f99a68b0f57389a8bf5434cd22e05c/modules/code/pool_v3?network=mainnet) and define the query we need.
+For Hyperion on Aptos, we take a different approach - using REST APIs directly without an SDK. Aptos uses a specific naming to accces any and all contract through something called a [view function](https://fullnode.mainnet.aptoslabs.com/v1/spec#/operations/view). the nomenclature is: `contract_address::method::function`. So going to the [hyperion docs](https://docs.hyperion.xyz/developer/via-contract) and referencing their main contract address we can see all methods and functions on the Aptos [blockchain explorer](https://explorer.aptoslabs.com/object/0x8b4a2c4bb53857c718a04c020b98f8c2e1f99a68b0f57389a8bf5434cd22e05c/modules/code/pool_v3?network=mainnet) and define the query we need.
 
 
 Let us now use a simple Json + request structure to query this REST endpoint. You can reference this `request_json` function implementation with Retry decorator in `queries.py`.
