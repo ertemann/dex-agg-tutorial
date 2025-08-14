@@ -13,6 +13,7 @@ from .models import Pair
 # Load environment variables from .env file
 load_dotenv()
 
+
 @retry(BadRequestException, delay=10, tries=2)
 def request_json(url: str) -> dict:
     """simple function to manage direct queries to the chain"""
@@ -34,14 +35,13 @@ def query_uniswap_price(pair: Pair, rpc_url: str) -> Optional[float]:
 
         # Set up Web3 provider
         web3 = Web3(Web3.HTTPProvider(rpc_url))
-        
+
         # Load Uniswap pool ABI from config
-        with open('uniswap_pool_abi.json', 'r') as abi_file:
+        with open("uniswap_pool_abi.json", "r") as abi_file:
             pool_abi = json.load(abi_file)
-        
+
         pool_contract = web3.eth.contract(
-            address=Web3.to_checksum_address(pool_address), 
-            abi=pool_abi
+            address=Web3.to_checksum_address(pool_address), abi=pool_abi
         )
 
         # Get current price from slot0
@@ -51,16 +51,18 @@ def query_uniswap_price(pair: Pair, rpc_url: str) -> Optional[float]:
         # Convert sqrt_price (Q64.96 format) to actual price
         # Formula: (sqrtPriceX96 / 2^96)^2
         # This gives us the price of token0 in terms of token1
-        raw_price = (sqrt_price_x96 / (2 ** 96)) ** 2
-        
+        raw_price = (sqrt_price_x96 / (2**96)) ** 2
+
         # In Uniswap V3, token0 and token1 ordering is based on contract address comparison
         # The raw price from sqrt gives us token0/token1
         # So the price of USDC/ETH comes out as dollars priced in ETH. To do smart ordering we
         # would have to start quering the token0/token1 addresses and do this dynamically.
-        
+
         # Adjust for token decimals difference
         # Price = raw_price * 10^(base_decimals - quote_decimals)
-        decimal_adjustment = 10 ** (pair.base_token_decimals - pair.quote_token_decimals)
+        decimal_adjustment = 10 ** (
+            pair.base_token_decimals - pair.quote_token_decimals
+        )
         return raw_price * decimal_adjustment
 
     except Exception as e:
@@ -76,24 +78,26 @@ def query_hyperion_price(pair: Pair, rpc_url: str) -> Optional[float]:
         if not pool_address:
             print(f"No Hyperion pool contract found for pair {pair.pair_id}")
             return None
-            
+
         # Query the LiquidityPoolV3 resource directly
         resource_url = f"{rpc_url}/v1/accounts/{pool_address}/resource/0x8b4a2c4bb53857c718a04c020b98f8c2e1f99a68b0f57389a8bf5434cd22e05c::pool_v3::LiquidityPoolV3"
-        
+
         resource_data = request_json(resource_url)
         # Extract sqrt_price from the resource data (x64 fixed-point)
-        sqrt_price = int(resource_data['data']['sqrt_price'])
-        
+        sqrt_price = int(resource_data["data"]["sqrt_price"])
+
         # Hyperion uses x64 fixed-point for sqrt_price, not Q64.96 like Uniswap
         # Formula: (sqrt_price / 2^64)^2
-        raw_price = float((sqrt_price / (2**64))**2)
-        
+        raw_price = float((sqrt_price / (2**64)) ** 2)
+
         # Adjust for token decimals difference
         # Price = raw_price * 10^(base_decimals - quote_decimals)
-        decimal_adjustment = 10 ** (pair.base_token_decimals - pair.quote_token_decimals)
+        decimal_adjustment = 10 ** (
+            pair.base_token_decimals - pair.quote_token_decimals
+        )
         return raw_price * decimal_adjustment
-            
-    except Exception as e: # fails gracefully, no price given
+
+    except Exception as e:  # fails gracefully, no price given
         print(f"Error querying Hyperion: {e}")
         return None
 
@@ -115,29 +119,31 @@ def get_token_price(token_pair: str) -> Dict:
         pair = Pair.objects.get(pair_id=token_pair)
     except Pair.DoesNotExist:
         return {"error": f"Pair {token_pair} not found"}
-    
+
     prices = {}
-    
+
     # We expect exchange to be defined for the pairs and supported as its admin defined
     for exchange_id in pair.active_exchanges:
         query_func = EXCHANGE_QUERY_FUNCTIONS[exchange_id]
         network = Exchange.get_network(exchange_id)
         rpc_url = os.getenv(f"{network.upper()}_RPC_URL")
-        
+
         # Query the exchange
         price = query_func(pair, rpc_url)
         if price is not None:
             prices[exchange_id] = price
-    
+
     # Return results
     if not prices:
         return {
             "token_pair": pair.pair_id,
-            "error": "No prices available from any exchange"
+            "error": "No prices available from any exchange",
         }
-    
+
     return {
         "token_pair": pair.pair_id,
-        "best_price": min(prices.values()), # Assumes pricing order is main/quote meaning lower is a better value (for buyers of base asset)
-        "prices": prices
+        "best_price": min(
+            prices.values()
+        ),  # Assumes pricing order is main/quote meaning lower is a better value (for buyers of base asset)
+        "prices": prices,
     }

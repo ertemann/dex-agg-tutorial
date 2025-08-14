@@ -93,7 +93,15 @@ poetry run python manage.py test core.tests.test_pricing
 
 ## Code Quality
 
-Pre-push hook runs automatically. Manual checks:
+Install pre-push hook (optional):
+```bash
+cp pre-push.sh .git/hooks/pre-push
+chmod +x .git/hooks/pre-push
+```
+
+Pre-push hook runs automatically therafter.
+
+Manual checks:
 ```bash
 poetry run black --check .
 poetry run ruff check .

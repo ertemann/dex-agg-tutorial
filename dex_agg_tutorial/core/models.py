@@ -9,7 +9,7 @@ class Pair(models.Model):
     pool_contracts = models.JSONField(
         default=dict,
         blank=True,
-        help_text="Mapping of exchange IDs to their pool contract addresses"
+        help_text="Mapping of exchange IDs to their pool contract addresses",
     )
     base_token = models.CharField(max_length=20)
     quote_token = models.CharField(max_length=20)

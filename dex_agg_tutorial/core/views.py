@@ -37,11 +37,11 @@ class PriceView(APIView):
 
         # Get price if pair is valid
         price_data = get_token_price(token_pair)
-        
+
         # Check if we got an error (no prices available)
         if "error" in price_data:
             return Response(price_data, status=503)  # Service Unavailable
-        
+
         return Response(price_data, status=200)
 
 
