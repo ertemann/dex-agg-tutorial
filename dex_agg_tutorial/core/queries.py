@@ -1,4 +1,3 @@
-import json
 import requests
 from retry import retry
 
@@ -12,7 +11,6 @@ def request_json(url: str) -> dict:
         return r.json()
     else:
         raise BadRequestException(f"Status Code: {r.status_code} | {url}")
-
 
 
 def get_token_price(token_pair):

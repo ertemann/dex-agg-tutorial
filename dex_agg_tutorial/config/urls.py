@@ -21,5 +21,9 @@ from core import views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("network_history/<str:network_name>/", views.NetworksHistoryView.as_view(), name="history"),
+    path(
+        "network_history/<str:network_name>/",
+        views.NetworksHistoryView.as_view(),
+        name="history",
+    ),
 ]

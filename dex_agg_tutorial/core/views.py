@@ -1,11 +1,10 @@
-import json
-
 from django.db import models
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from .queries import get_token_price
 from .models import Pair
+
 
 class DefaultView(APIView):
     def get(self, request):
@@ -29,18 +28,18 @@ class PriceView(APIView):
             pair = Pair.objects.get(pair_id=token_pair.upper())
             if not pair.active_exchanges:
                 return Response(
-                    {"error": f"Token pair {token_pair} is not active on any exchange"}, 
-                    status=400
+                    {"error": f"Token pair {token_pair} is not active on any exchange"},
+                    status=400,
                 )
         except Pair.DoesNotExist:
             return Response(
-                {"error": f"Token pair {token_pair} is not supported"}, 
-                status=404
+                {"error": f"Token pair {token_pair} is not supported"}, status=404
             )
-        
+
         # Get price if pair is valid
         price = get_token_price(token_pair)
         return Response({"price": price, "pair": token_pair}, status=200)
+
 
 class PairsView(APIView):
     """
@@ -57,42 +56,39 @@ class PairsView(APIView):
         # Get pairs that have at least one active exchange
         pairs = Pair.objects.exclude(active_exchanges=[]).values()
         return Response(pairs, status=200)
-    
+
     permission_classes = [IsAdminUser]
-    
+
     def post(self, request, format=None):
         """
         Add a new token pair to the available token pairs.
         """
         try:
             data = request.data
-            
+
             # Check if pair already exists
-            pair_id = data.get('pair_id')
+            pair_id = data.get("pair_id")
             if Pair.objects.filter(pair_id=pair_id).exists():
-                return Response(
-                    {"error": f"Pair {pair_id} already exists"}, 
-                    status=400
-                )
-            
+                return Response({"error": f"Pair {pair_id} already exists"}, status=400)
+
             # Generate uid automatically (max existing + 1)
-            max_uid = Pair.objects.aggregate(models.Max('uid'))['uid__max']
+            max_uid = Pair.objects.aggregate(models.Max("uid"))["uid__max"]
             next_uid = (max_uid or 0) + 1
-            
+
             # Create new pair
             pair = Pair(
                 uid=next_uid,
                 pair_id=pair_id,
-                base_token=data.get('base_token'),
-                quote_token=data.get('quote_token'),
-                active_exchanges=data.get('active_exchanges', [])
+                base_token=data.get("base_token"),
+                quote_token=data.get("quote_token"),
+                active_exchanges=data.get("active_exchanges", []),
             )
             pair.save()
-            
-            return Response({
-                "message": f"Created pair {pair.pair_id}",
-                "pair_id": pair.pair_id
-            }, status=201)
-            
+
+            return Response(
+                {"message": f"Created pair {pair.pair_id}", "pair_id": pair.pair_id},
+                status=201,
+            )
+
         except Exception as e:
             return Response({"error": str(e)}, status=400)
