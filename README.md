@@ -4,6 +4,10 @@ A Tutorial to build a DEX aggregator in Python using Django that supports price 
 
 The below information will help you setup a local development server to test and work on the endpoints. There is no production-ready setup information available as this project is not intended for production use. If you want to utilize this project to build a production-ready dex API we suggest to use a docker container to build and host the Django server and a platform like Vercel or Fly to host the database redundantly.
 
+### Design explainer
+As I am familiar working both with and without SDKs for pulling and using a chains data I figured it would make sense to make the aggregator for DEXs on different chains. From a PMF sense it is definitely unlikely that something like this will get used as it needs to provide a lot more clarity to the user but it is a good way to learn something to the developer about accessing chain data. You are not forced to download and use 10 different packages if you want to integrate with 10+ chains as basic REST and RPC endpoints exist. I think django is a lovely package and a solid way to familiarize oneself with typed/referenced backends which is why I chose that to build out the project.
+
+
 ## Setup
 
 1. Install dependencies:

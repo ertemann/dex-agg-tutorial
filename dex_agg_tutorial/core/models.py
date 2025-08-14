@@ -1,6 +1,5 @@
 from django.db import models
 
-
 class Pair(models.Model):
     """Model representing a token pair."""
 

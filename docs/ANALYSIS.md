@@ -1,26 +1,35 @@
-...
+Hi, Thanks for looking through my tutorial. It was fun to go through the full setup of a Django project once again.
 
 # Target Audience
+The audience for this tutorial is novice developers or even product owners/designers that are just interested in development with the goal of getting them over the line on building their first dApp. Why is because I believe tutorials to be the main way how these developers learn while for medior and senior engineers its much more about digesting extensive docs or full-stack apps by themselves. Tutorials are a form of onboarding and sometimes even marketing content and should be treated as those. 
 
+Things I focus on:
+- Name everything, don't skip over any bash/cli/setup info as junior devs might understand their language but don't grasp the full-stack context and project-management good enough to just do it so will get stuck on those points.
+- Reference back to docs of any and all tools being used
+- Constantly provide forward-looking statements and explain thinking as the attention-span is short and people want to learn over anything. They will likely never truly download and do the tutorial but they WILL remember certain concepts and be put on the right journey from enlightening comments.
+- Make bigger steps when it comes to code itself, writing full functions at once over explaining line by line. Tutorials are a hard format to make impact here, this is better done with excercises as then the difference in input/output is clear to them as they run it.
+- Explaining both Web3 and Web2 items extensively, experienced people will skip and just look at code/links while juniors are happy to have the context.
+
+In total this makes the tutorial quite sequential while also becoming a form of resources for people through links and deeper comments. Some of the code is re-usable but it is more important the project itself is functional immediately and provides a feeling of completion. Building something provides endorphines, endorphines make people happy and happy builders stick around.
 
 # common pain points
+I might have underestimated how difficult and complex django is to setup, especially for a relatively small and simple project like this. It is super powerfull but the entire config and settings files and working through `manage.py` will definitely be a pitfall for some. The django docs themselves are also utter shit in my opinion so extending this will be challenging for new users although very rewarding in the long run. 
 
+Wider pain points the tutorial covers are the actual integration with different chains and explaining where to find resources on how to do that. I remember vividly the first time I tried to get API specs for a cosmos RPC endpoint and a NEAR endpoint and it took me hours to get the correct info after dissecting source code, explorers and much more. In-line with my comments on the target audience I have added a deep explainer on WHY Aptos resources are available where they are and how this differs from using yet another SDK where half of the methods aren't implemented correctly.
 
-# future content
+Additionally I have tried my best to provide some context on the immensely strange data structures of blockchain tokens and pricing. To basically anyone outside of C, Rust and blockchain engineers it doesn't make a lot of sense that not everything is just a float. Why are prices not saved in a readable format, what is a decimal and why doesnt every token have the same amount of decimals? All of these questions are fair for new devs so the tutorial tries to guide them to the reasoning for these items. It is better to learn a man how to fish then give him one. 
 
+Lastly i spend some time on the SDK vs native implementation question which I think is fair for developers to consider. It can be a real pain to be reliant on poorly managed or incomplete dev tooling while building some of these building blocks in your own project isn't too complex. Using native methods also makes things visible (a big reason why REST endpoints are so nice for junior devs) which is a good help to get people further in exploring.
+
+There are still a lot of pain points to tackle like rate-limiting and caching for their API, proper "permissionless" token/pool support, optimizers for split routing, slippage/fee integration and so forth. But many of these items are sort of irrelevant when it comes to a tutorial in its basic form. This is meant to get people into the door and working with blockchain data so they should learn these items are important but there is enough material for them to figure this out. On that level imo a blockchain is better off making more chain-specific tutorials/use-cases as almost a form of incubation over setting basic examples.
+
+# Future Content
+I think this tutorial could still be improved a lot with just a little bit of extra time. This lies mainly in cleaning up some of the code choices like adding a Token Model, Providing an alternative Get method for Slippage/Fee aware quotes, Adding support for basic XYK amms, moving to Postgres for more extensive input validation in django. Dependent on what the goals are of the company I think those can be valuable as these could be seen as "follow-ups" and therefore tutorials in their own right. Some of these also have high SEO potential if that is important which is a good way to add brand awareness to a wider group of people. 
+
+Personally I think it would make a lot of sense though to extend this series with 2 things.
+
+1. A proper integration guide for "company" dexs (so for ex Initia) into existing dex aggregators or other ecosystems. Basically now that youve seen some of the pain points can we create a library or base project that will significantly simplify integrating Initia dexs into other ecosystems, BD people can then take this to convince. 
+2. A more step by step walkthrough/coding of the same or the follow up tutorials. The basis is here, have people dowload it and see you implement another feature on video or do it themselves through a jupyter notebook with correct tests. This actually forces people to see code being typed or doing it themselves and should trigger the next phase of learning. Imo this is much more effective than doing a similar tutorial again or just continuously extending the tutorial. You can look back at my target audience points to understand why I believe this.
 
 # Analytics
-
-
-
-
-### Improvements
-- dynamically create contracts
-- Allow any pairs by checking valid against chain
-- Slippage calculation
-- optimize between pools
-- Fee calculation
-- Within or across chain optimisation
-- make tokens a model as well, also exchanges
-- Proper token ordering, taking token info from pools.
-- provide more than min price
+I strongly believe that measuring input or very early stage leads is very hard to do accurately and quite irrelevant. It is most important to correctly track where devs that stuck around came from. Basically measure final impact from these tutorials and docs from the numbers at the end of the line when it comes to onboarded Apps, builders etc. Why, well a dev that tried your tutorial isnt worth anything if they don't continue in the ecosystem and the pipeline for them to build something with your project could be years. However, there is an inmense surviborship bias there so it is important to do some proper walkthroughs, calls or async feedback sessions with people that DID try the docs and tutorials to see if the reason they are NOT building on your project is because of those elements. This can be done quite easy by some minor reachout, a very simple feedback form and/or some github tracking. Alternatively other ecosystems give certificates, this isnt because they believe its worth much to give that, its a way to connect to the builders and measure the impact of their course and materials. Surely there are a ton of ways to try and convert the most people possible with thigs like discord and TG help channels, proper 1-1 help for engaged juniors, courses and more. But the metric to truly track is App-devs onboarded, which fluctuates like crazy and tooling and docs is only a very small part in that pipeline.
